@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { resumeSession, saveSession, type CafeSession, type Zone } from '@/lib/session';
 import { upsertRemoteSession } from '@/lib/sessionSync';
+import { pickInitial, rotateSample } from '@/lib/sampling';
+import { useZoneOccupants } from '@/lib/presence';
 import { ZoneCanvas, type VisibleCharacter } from '@/components/ZoneCanvas';
 import { Hud } from '@/components/Hud';
 import { ZoneToggle } from '@/components/ZoneToggle';
@@ -14,6 +16,39 @@ export default function CafePage() {
   const [session, setSession] = useState<CafeSession | null>(null);
   const [muted, setMuted] = useState(false);
   const [expired, setExpired] = useState(false);
+
+  const others = useZoneOccupants(session?.currentZone ?? 'notebook', session?.id ?? '');
+
+  const VISIBLE_OTHERS = 9;
+  const ROTATE_INTERVAL_MS = 30_000;
+  const ROTATE_COUNT = 2;
+
+  const [visibleIds, setVisibleIds] = useState<string[]>([]);
+
+  // 존 변경 시 새로 샘플링
+  useEffect(() => {
+    setVisibleIds(pickInitial(others.map((o) => o.id), VISIBLE_OTHERS));
+  }, [session?.currentZone]);
+
+  // 30초마다 일부 교체
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setVisibleIds((cur) =>
+        rotateSample(cur, others.map((o) => o.id), VISIBLE_OTHERS, ROTATE_COUNT)
+      );
+    }, ROTATE_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [others]);
+
+  // 누가 떠나거나 들어오면 빈 자리 즉시 채움
+  useEffect(() => {
+    setVisibleIds((cur) => rotateSample(cur, others.map((o) => o.id), VISIBLE_OTHERS, 0));
+  }, [others.length]);
+
+  const visibleOthers = useMemo(() => {
+    const byId = new Map(others.map((o) => [o.id, o]));
+    return visibleIds.map((id) => byId.get(id)).filter(Boolean) as typeof others;
+  }, [visibleIds, others]);
 
   useEffect(() => {
     const s = resumeSession();
@@ -34,8 +69,6 @@ export default function CafePage() {
     upsertRemoteSession(finalSession);
   }, [router]);
 
-  if (!session) return null;
-
   function setZone(z: Zone) {
     if (!session) return;
     const next = { ...session, currentZone: z };
@@ -44,6 +77,8 @@ export default function CafePage() {
     upsertRemoteSession(next);
   }
 
+  if (!session) return null;
+
   const selfCharacter: VisibleCharacter = {
     id: session.id,
     nickname: session.nickname,
@@ -51,9 +86,18 @@ export default function CafePage() {
     appearance: session.appearance,
   };
 
+  const otherCharacters: VisibleCharacter[] = visibleOthers.map((o) => ({
+    id: o.id,
+    nickname: o.nickname,
+    isSelf: false,
+    appearance: o.appearance,
+  }));
+
+  const allCharacters = [selfCharacter, ...otherCharacters];
+
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      <ZoneCanvas zone={session.currentZone} characters={[selfCharacter]} />
+      <ZoneCanvas zone={session.currentZone} characters={allCharacters} />
       <Hud
         nickname={session.nickname}
         menuId={session.currentMenu}
