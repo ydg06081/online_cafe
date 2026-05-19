@@ -2,8 +2,10 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { useState } from 'react';
 import { Character } from './Character';
-import type { Zone } from '@/lib/session';
+import { CharacterTooltip } from './CharacterTooltip';
+import type { CafeSession, Zone } from '@/lib/session';
 import type { Appearance } from '@/lib/appearance';
 
 const SEAT_SLOTS = [
@@ -16,6 +18,7 @@ export interface VisibleCharacter {
   appearance: Appearance;
   nickname: string;
   isSelf: boolean;
+  session?: CafeSession;
 }
 
 interface Props {
@@ -47,26 +50,37 @@ export function ZoneCanvas({ zone, characters }: Props) {
       <AnimatePresence>
         {characters.slice(0, SEAT_SLOTS.length).map((c, i) => {
           const slot = SEAT_SLOTS[i];
-          return (
-            <motion.div
-              key={c.id}
-              className="absolute"
-              style={{ left: `${slot.x}%`, top: `${slot.y}%`, transform: 'translate(-50%, -50%)' }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-            >
-              <Character appearance={c.appearance} size={c.isSelf ? 110 : 90} />
-              {c.isSelf && (
-                <div className="text-center text-xs mt-1 font-semibold text-white drop-shadow">
-                  {c.nickname}
-                </div>
-              )}
-            </motion.div>
-          );
+          return <SlotCharacter key={c.id} slot={slot} character={c} />;
         })}
       </AnimatePresence>
     </div>
+  );
+}
+
+function SlotCharacter({ slot, character }: { slot: { x: number; y: number }; character: VisibleCharacter }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <motion.div
+      className="absolute"
+      style={{ left: `${slot.x}%`, top: `${slot.y}%`, transform: 'translate(-50%, -50%)' }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.4 }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div className="relative">
+        <Character appearance={character.appearance} size={character.isSelf ? 110 : 90} />
+        {character.isSelf && (
+          <div className="text-center text-xs mt-1 font-semibold text-white drop-shadow">
+            {character.nickname}
+          </div>
+        )}
+        {hover && !character.isSelf && character.session && (
+          <CharacterTooltip session={character.session} />
+        )}
+      </div>
+    </motion.div>
   );
 }
