@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cafe-cream: #fdf6e3;
+  --cafe-brown: #6b4423;
+  --cafe-accent: #d97757;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Pretendard', sans-serif;
+}
