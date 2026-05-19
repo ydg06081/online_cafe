@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LiveCount } from '@/components/LiveCount';
 
 export default function LandingPage() {
   return (
@@ -8,9 +9,7 @@ export default function LandingPage() {
         Online Cafe
       </h1>
       <p className="text-lg text-stone-600 mb-2">잠시 들렀다 가는 온라인 카페</p>
-      <p className="text-sm text-stone-500 mb-10">
-        지금 카페에 <span className="font-semibold">— 명</span>이 있어요
-      </p>
+      <LiveCount />
       <Link
         href="/enter"
         className="px-8 py-4 rounded-full bg-[var(--cafe-accent)] text-white text-lg font-semibold shadow-md hover:scale-105 transition-transform"
