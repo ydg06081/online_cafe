@@ -1,13 +1,16 @@
-import { Character } from '@/components/Character';
+'use client';
+
+import { ZoneCanvas } from '@/components/ZoneCanvas';
 
 export default function CafePage() {
   return (
-    <div className="p-8 grid grid-cols-4 gap-6 bg-amber-100 min-h-screen">
-      {(['red', 'blue', 'green', 'purple'] as const).map((c) =>
-        (['none', 'beret', 'glasses', 'headphones'] as const).map((a) => (
-          <Character key={`${c}-${a}`} appearance={{ mugColor: c, accessory: a }} />
-        ))
-      )}
+    <div className="h-screen">
+      <ZoneCanvas
+        zone="notebook"
+        characters={[
+          { id: '1', nickname: '본인', isSelf: true, appearance: { mugColor: 'orange', accessory: 'glasses' } },
+        ]}
+      />
     </div>
   );
 }
