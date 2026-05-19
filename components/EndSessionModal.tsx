@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { toPng } from 'html-to-image';
 import { MENUS, getMenuById, type MenuId } from '@/lib/menu';
 import type { CafeSession } from '@/lib/session';
 import { formatRemaining } from '@/lib/time';
+import { ShareCard } from './ShareCard';
 
 interface Props {
   session: CafeSession;
@@ -21,11 +23,21 @@ export function EndSessionModal({ session, onExtend, onExit }: Props) {
   const [pickingMenu, setPickingMenu] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState<MenuId | null>(null);
   const [selectedDur, setSelectedDur] = useState(25 * 60);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const stayedSec = Math.floor(
     (Date.now() - new Date(session.startedAt).getTime()) / 1000
   );
   const menuChain = session.menuHistory.map((id) => getMenuById(id)?.emoji ?? '').join(' → ');
+
+  async function handleShare() {
+    if (!cardRef.current) return;
+    const dataUrl = await toPng(cardRef.current, { pixelRatio: 2 });
+    const link = document.createElement('a');
+    link.download = `cafe-${session.nickname}-${Date.now()}.png`;
+    link.href = dataUrl;
+    link.click();
+  }
 
   if (pickingMenu) {
     return (
@@ -97,7 +109,7 @@ export function EndSessionModal({ session, onExtend, onExit }: Props) {
             한 잔 더 주문하기
           </button>
           <button
-            onClick={() => alert('공유 카드는 다음 task에서 구현됩니다.')}
+            onClick={handleShare}
             className="w-full py-3 rounded-full border-2 border-stone-200 font-medium"
           >
             📸 공유 카드 저장
@@ -109,6 +121,10 @@ export function EndSessionModal({ session, onExtend, onExit }: Props) {
             카페 나가기
           </button>
         </div>
+      </div>
+      {/* off-screen render target for html-to-image PNG capture */}
+      <div style={{ position: 'fixed', left: -9999, top: 0 }}>
+        <ShareCard ref={cardRef} session={session} stayedSec={stayedSec} />
       </div>
     </Backdrop>
   );
