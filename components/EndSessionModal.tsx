@@ -1,0 +1,123 @@
+'use client';
+
+import { useState } from 'react';
+import { MENUS, getMenuById, type MenuId } from '@/lib/menu';
+import type { CafeSession } from '@/lib/session';
+import { formatRemaining } from '@/lib/time';
+
+interface Props {
+  session: CafeSession;
+  onExtend: (menuId: MenuId, durationSec: number) => void;
+  onExit: () => void;
+}
+
+const EXTEND_PRESETS = [
+  { label: '25분', sec: 25 * 60 },
+  { label: '50분', sec: 50 * 60 },
+  { label: '90분', sec: 90 * 60 },
+];
+
+export function EndSessionModal({ session, onExtend, onExit }: Props) {
+  const [pickingMenu, setPickingMenu] = useState(false);
+  const [selectedMenu, setSelectedMenu] = useState<MenuId | null>(null);
+  const [selectedDur, setSelectedDur] = useState(25 * 60);
+
+  const stayedSec = Math.floor(
+    (Date.now() - new Date(session.startedAt).getTime()) / 1000
+  );
+  const menuChain = session.menuHistory.map((id) => getMenuById(id)?.emoji ?? '').join(' → ');
+
+  if (pickingMenu) {
+    return (
+      <Backdrop>
+        <div className="bg-white rounded-2xl shadow-xl p-6 w-[420px]">
+          <h2 className="text-lg font-bold mb-3">한 잔 더 주문하시겠어요?</h2>
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            {MENUS.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setSelectedMenu(m.id)}
+                className={`flex flex-col items-center py-2 rounded-lg border-2 ${
+                  selectedMenu === m.id ? 'border-[var(--cafe-accent)]' : 'border-stone-200'
+                }`}
+              >
+                <span className="text-2xl">{m.emoji}</span>
+                <span className="text-xs">{m.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 mb-4">
+            {EXTEND_PRESETS.map((p) => (
+              <button
+                key={p.sec}
+                onClick={() => setSelectedDur(p.sec)}
+                className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm ${
+                  selectedDur === p.sec ? 'border-[var(--cafe-accent)]' : 'border-stone-200'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPickingMenu(false)}
+              className="px-4 py-2 text-stone-500"
+            >
+              뒤로
+            </button>
+            <button
+              disabled={!selectedMenu}
+              onClick={() => selectedMenu && onExtend(selectedMenu, selectedDur)}
+              className="flex-1 py-2 bg-[var(--cafe-accent)] text-white rounded-full font-semibold disabled:opacity-40"
+            >
+              주문하기
+            </button>
+          </div>
+        </div>
+      </Backdrop>
+    );
+  }
+
+  return (
+    <Backdrop>
+      <div className="bg-white rounded-2xl shadow-xl p-8 w-[420px] text-center">
+        <div className="text-5xl mb-2">☕</div>
+        <h2 className="text-2xl font-bold mb-4">오늘도 수고했어요!</h2>
+        <div className="text-left space-y-1 text-sm bg-amber-50 rounded-xl p-4 mb-6">
+          <p>📍 머문 시간: <strong>{formatRemaining(stayedSec)}</strong></p>
+          <p>🍽 주문한 메뉴: {menuChain} ({session.menuCount}개)</p>
+          {session.purpose && <p>✏️ &quot;{session.purpose}&quot;</p>}
+        </div>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => setPickingMenu(true)}
+            className="w-full py-3 rounded-full bg-[var(--cafe-accent)] text-white font-semibold"
+          >
+            한 잔 더 주문하기
+          </button>
+          <button
+            onClick={() => alert('공유 카드는 다음 task에서 구현됩니다.')}
+            className="w-full py-3 rounded-full border-2 border-stone-200 font-medium"
+          >
+            📸 공유 카드 저장
+          </button>
+          <button
+            onClick={onExit}
+            className="w-full py-2 text-stone-500 font-medium"
+          >
+            카페 나가기
+          </button>
+        </div>
+      </div>
+    </Backdrop>
+  );
+}
+
+function Backdrop({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-50">
+      {children}
+    </div>
+  );
+}

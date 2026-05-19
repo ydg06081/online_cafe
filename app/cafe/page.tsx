@@ -2,14 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { resumeSession, saveSession, type CafeSession, type Zone } from '@/lib/session';
-import { upsertRemoteSession } from '@/lib/sessionSync';
+import { resumeSession, saveSession, addMenuOrder, clearSession, type CafeSession, type Zone } from '@/lib/session';
+import { upsertRemoteSession, endRemoteSession } from '@/lib/sessionSync';
+import type { MenuId } from '@/lib/menu';
 import { pickInitial, rotateSample } from '@/lib/sampling';
 import { useZoneOccupants } from '@/lib/presence';
 import { ZoneCanvas, type VisibleCharacter } from '@/components/ZoneCanvas';
 import { Hud } from '@/components/Hud';
 import { ZoneToggle } from '@/components/ZoneToggle';
 import { AudioPlayer } from '@/components/AudioPlayer';
+import { EndSessionModal } from '@/components/EndSessionModal';
 
 export default function CafePage() {
   const router = useRouter();
@@ -114,12 +116,21 @@ export default function CafePage() {
       />
       <AudioPlayer zone={session.currentZone} muted={muted} />
       {expired && (
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-8 rounded-2xl shadow-xl">
-            <p className="text-xl font-bold mb-2">⏰ 시간이 다 됐어요!</p>
-            <p className="text-stone-600">(다음 task에서 종료 모달 구현)</p>
-          </div>
-        </div>
+        <EndSessionModal
+          session={session}
+          onExtend={(menuId: MenuId, durationSec: number) => {
+            const next = addMenuOrder(session, menuId, durationSec);
+            saveSession(next);
+            setSession(next);
+            upsertRemoteSession(next);
+            setExpired(false);
+          }}
+          onExit={() => {
+            endRemoteSession(session.id);
+            clearSession();
+            router.replace('/');
+          }}
+        />
       )}
     </div>
   );
