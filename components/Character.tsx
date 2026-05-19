@@ -17,7 +17,7 @@ const ACCESSORY_EMOJI: Record<string, string | null> = {
   headband: '🎀',
 };
 
-export function Character({ appearance, size = 56, withMug = true }: Props) {
+export function Character({ appearance, size = 140, withMug = true }: Props) {
   const mug = MUG_COLORS.find((c) => c.id === appearance.mugColor);
   const accessoryEmoji = ACCESSORY_EMOJI[appearance.accessory];
 

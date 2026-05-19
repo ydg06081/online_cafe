@@ -71,7 +71,7 @@ function SlotCharacter({ slot, character }: { slot: { x: number; y: number }; ch
       onMouseLeave={() => setHover(false)}
     >
       <div className="relative">
-        <Character appearance={character.appearance} size={character.isSelf ? 64 : 52} />
+        <Character appearance={character.appearance} size={character.isSelf ? 160 : 130} />
         {character.isSelf && (
           <div className="text-center text-xs mt-1 font-semibold text-white drop-shadow">
             {character.nickname}
