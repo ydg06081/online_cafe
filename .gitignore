@@ -10,3 +10,7 @@ pnpm-debug.log*
 .claude/
 .sisyphus/
 docs/
+.env
+.env*.local
+.playwright-mcp/
+tsconfig.tsbuildinfo
