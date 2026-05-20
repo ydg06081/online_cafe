@@ -9,9 +9,11 @@ interface Props {
   muted: boolean;
 }
 
+const AUDIO_BASE = process.env.NEXT_PUBLIC_R2_AUDIO_BASE ?? '';
+
 const SOURCES: Record<Zone, string> = {
-  notebook: '/audio/notebook-zone.mp3',
-  terrace: '/audio/terrace-zone.mp3',
+  notebook: `${AUDIO_BASE}/notebook-zone.mp3`,
+  terrace: `${AUDIO_BASE}/terrace-zone.mp3`,
 };
 
 const FADE_MS = 800;
