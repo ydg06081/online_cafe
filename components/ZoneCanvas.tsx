@@ -45,9 +45,11 @@ interface Props {
   characters: VisibleCharacter[];
 }
 
+const R2_BASE = process.env.NEXT_PUBLIC_R2_BASE ?? '';
+
 const BACKGROUND_SRC: Record<Zone, string> = {
-  notebook: '/images/terminal cafe.png',
-  terrace:  '/images/terminal teras.png',
+  notebook: `${R2_BASE}/images/terminal-cafe.png`,
+  terrace:  `${R2_BASE}/images/terminal-teras.png`,
 };
 
 export function ZoneCanvas({ zone, characters }: Props) {

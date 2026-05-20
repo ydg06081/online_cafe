@@ -16,3 +16,4 @@ docs/
 tsconfig.tsbuildinfo
 public/audio/*.mp3
 public/music/
+public/images/*.png
