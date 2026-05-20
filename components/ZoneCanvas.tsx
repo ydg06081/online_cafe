@@ -1,6 +1,5 @@
 'use client';
 
-
 import Image from 'next/image';
 import { useState } from 'react';
 import { Character } from './Character';
@@ -43,6 +42,7 @@ export interface VisibleCharacter {
 interface Props {
   zone: Zone;
   characters: VisibleCharacter[];
+  onSelfPositionChange?: (pos: { x: number; y: number }) => void;
 }
 
 const R2_BASE = process.env.NEXT_PUBLIC_R2_BASE ?? '';
@@ -52,10 +52,12 @@ const BACKGROUND_SRC: Record<Zone, string> = {
   terrace:  `${R2_BASE}/images/terminal-teras.png`,
 };
 
-export function ZoneCanvas({ zone, characters }: Props) {
+export function ZoneCanvas({ zone, characters, onSelfPositionChange }: Props) {
+  const arranged = arrangeForArc(characters, SEAT_SLOTS[zone].length);
+
   return (
     <div
-      className="relative w-full h-full overflow-hidden"
+      className="relative w-full h-full overflow-hidden touch-none"
       data-testid={`zone-${zone}`}
     >
       <Image
@@ -65,13 +67,22 @@ export function ZoneCanvas({ zone, characters }: Props) {
         className="object-cover"
         priority
       />
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white font-semibold opacity-80 drop-shadow">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white font-semibold opacity-80 drop-shadow text-sm sm:text-base">
         {zone === 'notebook' ? '🏠 노트북 존' : '🌿 테라스 존'}
       </div>
-      {arrangeForArc(characters, SEAT_SLOTS[zone].length).map((c, i) => {
+      {arranged.map((c, i) => {
         if (!c) return null;
-        const slot = SEAT_SLOTS[zone][i];
-        return <SlotCharacter key={c.id} slot={slot} character={c} />;
+        const slot = c.session?.position
+          ? { x: c.session.position.x, y: c.session.position.y, scale: c.isSelf ? 1.15 : 1.0 }
+          : SEAT_SLOTS[zone][i];
+        return (
+          <SlotCharacter
+            key={c.id}
+            slot={slot}
+            character={c}
+            onPositionChange={c.isSelf ? onSelfPositionChange : undefined}
+          />
+        );
       })}
     </div>
   );
@@ -89,14 +100,46 @@ function arrangeForArc(characters: VisibleCharacter[], maxSlots: number): (Visib
   return out;
 }
 
-function SlotCharacter({ slot, character }: { slot: { x: number; y: number; scale: number }; character: VisibleCharacter }) {
+function SlotCharacter({
+  slot,
+  character,
+  onPositionChange,
+}: {
+  slot: { x: number; y: number; scale: number };
+  character: VisibleCharacter;
+  onPositionChange?: (pos: { x: number; y: number }) => void;
+}) {
   const [hover, setHover] = useState(false);
-  const baseSize = character.isSelf ? 170 : 140;
-  const size = Math.round(baseSize * slot.scale);
+  const [dragging, setDragging] = useState(false);
+
+  const sizeClasses = character.isSelf
+    ? 'w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-44 lg:h-44'
+    : 'w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-40 lg:h-40';
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!onPositionChange) return;
+    setDragging(true);
+    (e.target as Element).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragging || !onPositionChange) return;
+    const rect = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    onPositionChange({
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+    });
+  };
+
+  const handlePointerUp = () => {
+    setDragging(false);
+  };
 
   return (
     <div
-      className="absolute"
+      className={`absolute ${character.isSelf && onPositionChange ? 'cursor-grab active:cursor-grabbing z-10' : ''}`}
       style={{
         left: `${slot.x}%`,
         top: `${slot.y}%`,
@@ -104,9 +147,12 @@ function SlotCharacter({ slot, character }: { slot: { x: number; y: number; scal
       }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
     >
-      <div className="relative" style={{ width: size, height: size }}>
-        <Character appearance={character.appearance} size={size} />
+      <div className={`relative ${sizeClasses}`}>
+        <Character appearance={character.appearance} className="w-full h-full" />
         {character.isSelf && (
           <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-white drop-shadow whitespace-nowrap">
             {character.nickname}

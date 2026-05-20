@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { resumeSession, saveSession, addMenuOrder, clearSession, type CafeSession, type Zone } from '@/lib/session';
 import { upsertRemoteSession, endRemoteSession } from '@/lib/sessionSync';
@@ -80,6 +80,21 @@ export default function CafePage() {
     upsertRemoteSession(next);
   }
 
+  const lastSyncRef = useRef(0);
+
+  const handleSelfPositionChange = useCallback((pos: { x: number; y: number }) => {
+    if (!session) return;
+    const next = { ...session, position: pos };
+    setSession(next);
+    saveSession(next);
+
+    const now = Date.now();
+    if (now - lastSyncRef.current > 500) {
+      lastSyncRef.current = now;
+      upsertRemoteSession(next);
+    }
+  }, [session]);
+
   if (!session) return null;
 
   const selfCharacter: VisibleCharacter = {
@@ -101,7 +116,11 @@ export default function CafePage() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      <ZoneCanvas zone={session.currentZone} characters={allCharacters} />
+      <ZoneCanvas
+        zone={session.currentZone}
+        characters={allCharacters}
+        onSelfPositionChange={handleSelfPositionChange}
+      />
       <Hud
         nickname={session.nickname}
         menuId={session.currentMenu}
@@ -125,7 +144,7 @@ export default function CafePage() {
             router.replace('/');
           }
         }}
-        className="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow text-sm font-semibold text-stone-700 hover:bg-white z-20"
+        className="absolute top-14 right-2 sm:top-4 sm:right-4 bg-white/90 backdrop-blur px-2 py-1 sm:px-4 sm:py-2 rounded-full shadow text-xs sm:text-sm font-semibold text-stone-700 hover:bg-white z-20"
       >
         🚪 나가기
       </button>
