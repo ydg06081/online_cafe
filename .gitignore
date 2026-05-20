@@ -15,3 +15,4 @@ docs/
 .playwright-mcp/
 tsconfig.tsbuildinfo
 public/audio/*.mp3
+public/music/
