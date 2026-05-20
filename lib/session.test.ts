@@ -46,6 +46,14 @@ describe('session', () => {
     expect(loaded).toEqual(s);
   });
 
+  it('saveSession + loadSession round-trips with position', () => {
+    const s = createSession({ nickname: 'a', menuId: 'americano', durationSec: 60 });
+    const withPos = { ...s, position: { x: 25, y: 50 } };
+    saveSession(withPos);
+    const loaded = loadSession();
+    expect(loaded).toEqual(withPos);
+  });
+
   it('loadSession returns null when nothing stored', () => {
     expect(loadSession()).toBeNull();
   });

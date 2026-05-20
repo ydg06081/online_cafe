@@ -14,6 +14,7 @@ interface SessionRow {
   current_zone: 'notebook' | 'terrace';
   appearance: { mugColor: string; accessory: string };
   seat_slot: number | null;
+  position: { x: number; y: number } | null;
   status: 'active' | 'ended';
 }
 
@@ -31,6 +32,7 @@ function toRow(s: CafeSession): SessionRow {
     current_zone: s.currentZone,
     appearance: s.appearance,
     seat_slot: s.seatSlot ?? null,
+    position: s.position ?? null,
     status: 'active',
   };
 }
@@ -59,6 +61,7 @@ export function rowToSession(r: SessionRow): CafeSession {
     currentZone: r.current_zone,
     appearance: r.appearance,
     seatSlot: r.seat_slot ?? undefined,
+    position: r.position ?? undefined,
   };
 }
 

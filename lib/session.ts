@@ -16,6 +16,7 @@ export interface CafeSession {
   currentZone: Zone;
   appearance: Appearance;
   seatSlot?: number;
+  position?: { x: number; y: number };
 }
 
 const STORAGE_KEY = 'online-cafe-session';

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { MenuId } from '@/lib/menu';
-import { createSession, saveSession } from '@/lib/session';
+import { createSession, saveSession, resumeSession } from '@/lib/session';
+import { saveNicknameToHistory } from '@/lib/nicknameHistory';
 import { DEFAULT_CHARACTER_ID } from '@/lib/appearance';
 import { NicknameStep } from './steps/NicknameStep';
 import { CharacterStep } from './steps/CharacterStep';
@@ -33,6 +34,15 @@ export function EntryFlow() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<EntryDraft>(initial);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    if (resumeSession()) {
+      router.replace('/cafe');
+      return;
+    }
+    setChecking(false);
+  }, [router]);
 
   function patch(p: Partial<EntryDraft>) {
     setDraft((d) => ({ ...d, ...p }));
@@ -78,8 +88,11 @@ export function EntryFlow() {
     });
     session.appearance = { ...session.appearance, characterId: draft.characterId };
     saveSession(session);
+    saveNicknameToHistory(draft.nickname);
     router.push('/cafe');
   }
+
+  if (checking) return null;
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
