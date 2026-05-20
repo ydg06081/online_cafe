@@ -16,9 +16,6 @@ export default function LandingPage() {
       >
         카페 입장하기 →
       </Link>
-      <footer className="mt-24 text-xs text-stone-400">
-        Clawd character © clawd-on-desk contributors (AGPL-3.0)
-      </footer>
     </main>
   );
 }

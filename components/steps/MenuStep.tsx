@@ -14,19 +14,19 @@ export function MenuStep({ value, onChange, onBack, onNext }: Props) {
     <div>
       <h2 className="text-xl font-bold mb-2">무엇을 주문하시겠어요?</h2>
       <p className="text-sm text-stone-500 mb-6">한 잔 골라주세요</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-2 max-h-[420px] overflow-y-auto pr-1">
         {MENUS.map((m) => (
           <button
             key={m.id}
             onClick={() => onChange(m.id)}
-            className={`flex flex-col items-center gap-1 py-4 rounded-xl border-2 transition ${
+            className={`flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition ${
               value === m.id
                 ? 'border-[var(--cafe-accent)] bg-amber-50'
                 : 'border-stone-200 hover:border-stone-300'
             }`}
           >
-            <span className="text-3xl">{m.emoji}</span>
-            <span className="text-sm font-medium">{m.name}</span>
+            <span className="text-2xl">{m.emoji}</span>
+            <span className="text-xs font-medium text-center leading-tight">{m.name}</span>
           </button>
         ))}
       </div>

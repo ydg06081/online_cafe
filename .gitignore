@@ -14,3 +14,4 @@ docs/
 .env*.local
 .playwright-mcp/
 tsconfig.tsbuildinfo
+public/audio/*.mp3

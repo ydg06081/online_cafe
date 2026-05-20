@@ -1,16 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { MenuId } from '@/lib/menu';
 import { createSession, saveSession } from '@/lib/session';
+import { DEFAULT_CHARACTER_ID } from '@/lib/appearance';
 import { NicknameStep } from './steps/NicknameStep';
+import { CharacterStep } from './steps/CharacterStep';
 import { MenuStep } from './steps/MenuStep';
 import { TimePurposeStep } from './steps/TimePurposeStep';
 import { SoundOnStep } from './steps/SoundOnStep';
 
 export interface EntryDraft {
   nickname: string;
+  characterId: string;
   menuId: MenuId | null;
   durationSec: number;
   purpose: string;
@@ -18,10 +21,13 @@ export interface EntryDraft {
 
 const initial: EntryDraft = {
   nickname: '',
+  characterId: DEFAULT_CHARACTER_ID,
   menuId: null,
   durationSec: 25 * 60,
   purpose: '',
 };
+
+const TOTAL_STEPS = 5;
 
 export function EntryFlow() {
   const router = useRouter();
@@ -32,6 +38,36 @@ export function EntryFlow() {
     setDraft((d) => ({ ...d, ...p }));
   }
 
+  function canAdvance(): boolean {
+    if (step === 1) {
+      const n = draft.nickname.trim();
+      return n.length >= 2 && n.length <= 12;
+    }
+    if (step === 2) return !!draft.characterId;
+    if (step === 3) return !!draft.menuId;
+    if (step === 4) return draft.durationSec >= 5 * 60;
+    return true;
+  }
+
+  function advance() {
+    if (!canAdvance()) return;
+    if (step < TOTAL_STEPS) setStep(step + 1);
+    else finish();
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Enter') return;
+      const target = e.target as HTMLElement | null;
+      if (target instanceof HTMLTextAreaElement) return;
+      // Step 1 input already handles Enter internally — let it bubble normally.
+      e.preventDefault();
+      advance();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [step, draft]);
+
   function finish() {
     if (!draft.menuId) return;
     const session = createSession({
@@ -40,6 +76,7 @@ export function EntryFlow() {
       durationSec: draft.durationSec,
       purpose: draft.purpose,
     });
+    session.appearance = { ...session.appearance, characterId: draft.characterId };
     saveSession(session);
     router.push('/cafe');
   }
@@ -48,7 +85,7 @@ export function EntryFlow() {
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
         <div className="flex gap-2 mb-6">
-          {[1, 2, 3, 4].map((n) => (
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((n) => (
             <div
               key={n}
               className={`h-1 flex-1 rounded ${n <= step ? 'bg-[var(--cafe-accent)]' : 'bg-stone-200'}`}
@@ -63,23 +100,31 @@ export function EntryFlow() {
           />
         )}
         {step === 2 && (
-          <MenuStep
-            value={draft.menuId}
-            onChange={(v) => patch({ menuId: v })}
+          <CharacterStep
+            value={draft.characterId}
+            onChange={(v) => patch({ characterId: v })}
             onBack={() => setStep(1)}
             onNext={() => setStep(3)}
           />
         )}
         {step === 3 && (
-          <TimePurposeStep
-            durationSec={draft.durationSec}
-            purpose={draft.purpose}
-            onChange={(d, p) => patch({ durationSec: d, purpose: p })}
+          <MenuStep
+            value={draft.menuId}
+            onChange={(v) => patch({ menuId: v })}
             onBack={() => setStep(2)}
             onNext={() => setStep(4)}
           />
         )}
-        {step === 4 && <SoundOnStep onEnter={finish} onBack={() => setStep(3)} />}
+        {step === 4 && (
+          <TimePurposeStep
+            durationSec={draft.durationSec}
+            purpose={draft.purpose}
+            onChange={(d, p) => patch({ durationSec: d, purpose: p })}
+            onBack={() => setStep(3)}
+            onNext={() => setStep(5)}
+          />
+        )}
+        {step === 5 && <SoundOnStep onEnter={finish} onBack={() => setStep(4)} />}
       </div>
     </main>
   );

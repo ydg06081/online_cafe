@@ -62,7 +62,8 @@ export default function CafePage() {
     // Assign random seat on first load if not set
     let finalSession = s;
     if (s.seatSlot == null) {
-      finalSession = { ...s, seatSlot: Math.floor(Math.random() * 10) };
+      const maxSlots = s.currentZone === 'terrace' ? 10 : 12;
+      finalSession = { ...s, seatSlot: Math.floor(Math.random() * maxSlots) };
       saveSession(finalSession);
       upsertRemoteSession(finalSession);
     }
@@ -93,6 +94,7 @@ export default function CafePage() {
     nickname: o.nickname,
     isSelf: false,
     appearance: o.appearance,
+    session: o,
   }));
 
   const allCharacters = [selfCharacter, ...otherCharacters];
@@ -115,6 +117,18 @@ export default function CafePage() {
         onToggleMute={() => setMuted((m) => !m)}
       />
       <AudioPlayer zone={session.currentZone} muted={muted} />
+      <button
+        onClick={() => {
+          if (confirm('카페에서 나가시겠어요?')) {
+            endRemoteSession(session.id);
+            clearSession();
+            router.replace('/');
+          }
+        }}
+        className="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow text-sm font-semibold text-stone-700 hover:bg-white z-20"
+      >
+        🚪 나가기
+      </button>
       {expired && (
         <EndSessionModal
           session={session}

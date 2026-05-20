@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+
 import Image from 'next/image';
 import { useState } from 'react';
 import { Character } from './Character';
@@ -8,10 +8,29 @@ import { CharacterTooltip } from './CharacterTooltip';
 import type { CafeSession, Zone } from '@/lib/session';
 import type { Appearance } from '@/lib/appearance';
 
-const SEAT_SLOTS = [
-  { x: 12, y: 55 }, { x: 28, y: 62 }, { x: 44, y: 58 }, { x: 60, y: 64 }, { x: 76, y: 56 },
-  { x: 18, y: 78 }, { x: 36, y: 82 }, { x: 54, y: 80 }, { x: 72, y: 84 }, { x: 88, y: 76 },
-];
+// Horseshoe/arc layout — self sits at index 0 (center), others fan out left/right.
+// Order: center, then alternating right/left outward.
+function buildArcSlots(count: number): { x: number; y: number; scale: number }[] {
+  const slots: { x: number; y: number; scale: number }[] = [];
+  const centerX = 50;
+  const centerY = 72;
+  const stepX = 11; // horizontal spacing
+  const liftY = 4;  // each ring further from center sits a bit higher (perspective)
+  slots.push({ x: centerX, y: centerY + 4, scale: 1.15 });
+  const pairs = Math.ceil((count - 1) / 2);
+  for (let i = 1; i <= pairs; i++) {
+    const y = centerY - i * liftY;
+    const scale = Math.max(0.65, 1.05 - i * 0.08);
+    slots.push({ x: centerX + i * stepX, y, scale });
+    slots.push({ x: centerX - i * stepX, y, scale });
+  }
+  return slots.slice(0, count);
+}
+
+const SEAT_SLOTS: Record<Zone, { x: number; y: number; scale: number }[]> = {
+  notebook: buildArcSlots(10),
+  terrace: buildArcSlots(10),
+};
 
 export interface VisibleCharacter {
   id: string;
@@ -47,33 +66,47 @@ export function ZoneCanvas({ zone, characters }: Props) {
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white font-semibold opacity-80 drop-shadow">
         {zone === 'notebook' ? '🏠 노트북 존' : '🌿 테라스 존'}
       </div>
-      <AnimatePresence>
-        {characters.slice(0, SEAT_SLOTS.length).map((c, i) => {
-          const slot = SEAT_SLOTS[i];
-          return <SlotCharacter key={c.id} slot={slot} character={c} />;
-        })}
-      </AnimatePresence>
+      {arrangeForArc(characters, SEAT_SLOTS[zone].length).map((c, i) => {
+        if (!c) return null;
+        const slot = SEAT_SLOTS[zone][i];
+        return <SlotCharacter key={c.id} slot={slot} character={c} />;
+      })}
     </div>
   );
 }
 
-function SlotCharacter({ slot, character }: { slot: { x: number; y: number }; character: VisibleCharacter }) {
+// Place self at center (index 0); fill remaining slots alternating outward with others.
+function arrangeForArc(characters: VisibleCharacter[], maxSlots: number): (VisibleCharacter | null)[] {
+  const self = characters.find((c) => c.isSelf) ?? null;
+  const others = characters.filter((c) => !c.isSelf);
+  const out: (VisibleCharacter | null)[] = new Array(maxSlots).fill(null);
+  out[0] = self;
+  for (let i = 0; i < others.length && i + 1 < maxSlots; i++) {
+    out[i + 1] = others[i];
+  }
+  return out;
+}
+
+function SlotCharacter({ slot, character }: { slot: { x: number; y: number; scale: number }; character: VisibleCharacter }) {
   const [hover, setHover] = useState(false);
+  const baseSize = character.isSelf ? 170 : 140;
+  const size = Math.round(baseSize * slot.scale);
+
   return (
-    <motion.div
+    <div
       className="absolute"
-      style={{ left: `${slot.x}%`, top: `${slot.y}%`, transform: 'translate(-50%, -50%)' }}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.4 }}
+      style={{
+        left: `${slot.x}%`,
+        top: `${slot.y}%`,
+        transform: 'translate(-50%, -100%)',
+      }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <div className="relative">
-        <Character appearance={character.appearance} size={character.isSelf ? 160 : 130} />
+      <div className="relative" style={{ width: size, height: size }}>
+        <Character appearance={character.appearance} size={size} />
         {character.isSelf && (
-          <div className="text-center text-xs mt-1 font-semibold text-white drop-shadow">
+          <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-white drop-shadow whitespace-nowrap">
             {character.nickname}
           </div>
         )}
@@ -81,6 +114,6 @@ function SlotCharacter({ slot, character }: { slot: { x: number; y: number }; ch
           <CharacterTooltip session={character.session} />
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }

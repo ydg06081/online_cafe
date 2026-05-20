@@ -12,12 +12,14 @@ export function useZoneOccupants(zone: Zone, selfId: string): CafeSession[] {
     const sb = supabase();
     let active = true;
 
-    sb.from('sessions')
+    let query = sb.from('sessions')
       .select('*')
       .eq('current_zone', zone)
-      .eq('status', 'active')
-      .neq('id', selfId)
-      .then(({ data, error }) => {
+      .eq('status', 'active');
+    if (selfId) {
+      query = query.neq('id', selfId);
+    }
+    query.then(({ data, error }) => {
         if (error) {
           console.error('fetch occupants', error);
           return;
