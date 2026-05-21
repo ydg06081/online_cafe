@@ -30,6 +30,19 @@ const initial: EntryDraft = {
 
 const TOTAL_STEPS = 5;
 
+const AUDIO_SOURCES = [
+  `${process.env.NEXT_PUBLIC_R2_BASE ?? ''}/notebook-zone.mp3`,
+  `${process.env.NEXT_PUBLIC_R2_BASE ?? ''}/terrace-zone.mp3`,
+];
+
+function preloadAudio() {
+  AUDIO_SOURCES.forEach((src) => {
+    const audio = new Audio();
+    audio.preload = 'auto';
+    audio.src = src;
+  });
+}
+
 export function EntryFlow() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -42,6 +55,7 @@ export function EntryFlow() {
       return;
     }
     setChecking(false);
+    preloadAudio();
   }, [router]);
 
   function patch(p: Partial<EntryDraft>) {

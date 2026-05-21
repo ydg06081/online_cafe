@@ -23,11 +23,62 @@ interface FadeHandle {
   cancel: () => void;
 }
 
+const STORAGE_KEY = (z: Zone) => `cafe:audio:${z}:t`;
+
+function restoreTime(el: HTMLAudioElement | null, zone: Zone) {
+  if (!el || typeof window === 'undefined') return;
+  const raw = sessionStorage.getItem(STORAGE_KEY(zone));
+  const t = raw ? parseFloat(raw) : NaN;
+  if (!Number.isFinite(t) || t < 0) return;
+  const apply = () => {
+    const dur = el.duration;
+    el.currentTime = Number.isFinite(dur) && dur > 0 ? t % dur : t;
+  };
+  if (el.readyState >= 1) apply();
+  else el.addEventListener('loadedmetadata', apply, { once: true });
+}
+
 export function AudioPlayer({ zone, muted }: Props) {
   const notebookRef = useRef<HTMLAudioElement>(null);
   const terraceRef = useRef<HTMLAudioElement>(null);
   // Track the in-flight fade for each element so a new one can cancel it.
   const fadeMap = useRef<WeakMap<HTMLAudioElement, FadeHandle>>(new WeakMap());
+
+  // Restore saved playback position once per element.
+  useEffect(() => {
+    restoreTime(notebookRef.current, 'notebook');
+    restoreTime(terraceRef.current, 'terrace');
+  }, []);
+
+  // Persist currentTime periodically and on unload.
+  useEffect(() => {
+    const pairs: Array<[Zone, HTMLAudioElement | null]> = [
+      ['notebook', notebookRef.current],
+      ['terrace', terraceRef.current],
+    ];
+    const save = (z: Zone, el: HTMLAudioElement) => {
+      sessionStorage.setItem(STORAGE_KEY(z), String(el.currentTime));
+    };
+    const lastSave: Record<string, number> = {};
+    const handlers: Array<() => void> = [];
+    for (const [z, el] of pairs) {
+      if (!el) continue;
+      const onTime = () => {
+        const now = performance.now();
+        if ((lastSave[z] ?? 0) + 1000 > now) return;
+        lastSave[z] = now;
+        save(z, el);
+      };
+      el.addEventListener('timeupdate', onTime);
+      handlers.push(() => el.removeEventListener('timeupdate', onTime));
+    }
+    const onUnload = () => {
+      for (const [z, el] of pairs) if (el) save(z, el);
+    };
+    window.addEventListener('pagehide', onUnload);
+    handlers.push(() => window.removeEventListener('pagehide', onUnload));
+    return () => handlers.forEach((fn) => fn());
+  }, []);
 
   useEffect(() => {
     const active = zone === 'notebook' ? notebookRef.current : terraceRef.current;
@@ -47,8 +98,8 @@ export function AudioPlayer({ zone, muted }: Props) {
 
   return (
     <>
-      <audio ref={notebookRef} src={SOURCES.notebook} loop preload="auto" />
-      <audio ref={terraceRef} src={SOURCES.terrace} loop preload="auto" />
+      <audio ref={notebookRef} src={SOURCES.notebook} loop preload="metadata" />
+      <audio ref={terraceRef} src={SOURCES.terrace} loop preload="metadata" />
     </>
   );
 }
