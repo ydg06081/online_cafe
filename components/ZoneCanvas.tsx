@@ -116,15 +116,18 @@ function SlotCharacter({
     ? 'w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-44 lg:h-44'
     : 'w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-40 lg:h-40';
 
-  const handlePointerDown = (e: React.PointerEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!onPositionChange) return;
+    e.preventDefault();
     setDragging(true);
-    (e.target as Element).setPointerCapture(e.pointerId);
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragging || !onPositionChange) return;
-    const rect = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
+    const parent = e.currentTarget.parentElement;
+    if (!parent) return;
+    const rect = parent.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     onPositionChange({
@@ -133,7 +136,10 @@ function SlotCharacter({
     });
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
     setDragging(false);
   };
 
@@ -150,9 +156,14 @@ function SlotCharacter({
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onDragStart={(e) => e.preventDefault()}
     >
-      <div className={`relative ${sizeClasses}`}>
-        <Character appearance={character.appearance} className="w-full h-full" />
+      <div
+        className={`relative ${sizeClasses} select-none`}
+        style={{ touchAction: 'none', WebkitUserDrag: 'none' } as React.CSSProperties}
+      >
+        <Character appearance={character.appearance} className="w-full h-full pointer-events-none" />
         {character.isSelf && (
           <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-white drop-shadow whitespace-nowrap">
             {character.nickname}

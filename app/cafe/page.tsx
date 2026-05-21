@@ -83,17 +83,20 @@ export default function CafePage() {
   const lastSyncRef = useRef(0);
 
   const handleSelfPositionChange = useCallback((pos: { x: number; y: number }) => {
-    if (!session) return;
-    const next = { ...session, position: pos };
-    setSession(next);
-    saveSession(next);
+    setSession((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, position: pos };
+      saveSession(next);
 
-    const now = Date.now();
-    if (now - lastSyncRef.current > 500) {
-      lastSyncRef.current = now;
-      upsertRemoteSession(next);
-    }
-  }, [session]);
+      const now = Date.now();
+      if (now - lastSyncRef.current > 500) {
+        lastSyncRef.current = now;
+        upsertRemoteSession(next);
+      }
+
+      return next;
+    });
+  }, []);
 
   if (!session) return null;
 
@@ -102,6 +105,7 @@ export default function CafePage() {
     nickname: session.nickname,
     isSelf: true,
     appearance: session.appearance,
+    session: session,
   };
 
   const otherCharacters: VisibleCharacter[] = visibleOthers.map((o) => ({

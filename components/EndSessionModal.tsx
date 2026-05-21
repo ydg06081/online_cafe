@@ -16,13 +16,24 @@ interface Props {
 const EXTEND_PRESETS = [
   { label: '25분', sec: 25 * 60 },
   { label: '50분', sec: 50 * 60 },
-  { label: '90분', sec: 90 * 60 },
 ];
 
 export function EndSessionModal({ session, onExtend, onExit }: Props) {
   const [pickingMenu, setPickingMenu] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState<MenuId | null>(null);
   const [selectedDur, setSelectedDur] = useState(25 * 60);
+  const [customInput, setCustomInput] = useState('');
+
+  const customMin = parseInt(customInput, 10);
+  const customValid = Number.isFinite(customMin) && customMin >= 1 && customMin <= 180;
+  const isCustomMode = customInput.length > 0;
+  const canOrder = !!selectedMenu && (isCustomMode ? customValid : selectedDur > 0);
+  const finalDur = isCustomMode && customValid ? customMin * 60 : selectedDur;
+
+  function handleCustomChange(value: string) {
+    const digits = value.replace(/[^0-9]/g, '').slice(0, 3);
+    setCustomInput(digits);
+  }
   const cardRef = useRef<HTMLDivElement>(null);
 
   const stayedSec = Math.floor(
@@ -62,14 +73,35 @@ export function EndSessionModal({ session, onExtend, onExit }: Props) {
             {EXTEND_PRESETS.map((p) => (
               <button
                 key={p.sec}
-                onClick={() => setSelectedDur(p.sec)}
+                onClick={() => {
+                  setSelectedDur(p.sec);
+                  setCustomInput('');
+                }}
                 className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm ${
-                  selectedDur === p.sec ? 'border-[var(--cafe-accent)]' : 'border-stone-200'
+                  !isCustomMode && selectedDur === p.sec
+                    ? 'border-[var(--cafe-accent)]'
+                    : 'border-stone-200'
                 }`}
               >
                 {p.label}
               </button>
             ))}
+            <div
+              className={`flex-1 flex items-center gap-1 px-2 py-2 rounded-lg border-2 text-sm ${
+                isCustomMode ? 'border-[var(--cafe-accent)]' : 'border-stone-200'
+              }`}
+            >
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={customInput}
+                onChange={(e) => handleCustomChange(e.target.value)}
+                placeholder="직접"
+                className="w-full min-w-0 px-1 py-0.5 text-center bg-transparent outline-none"
+              />
+              <span className="text-stone-500">분</span>
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -79,8 +111,8 @@ export function EndSessionModal({ session, onExtend, onExit }: Props) {
               뒤로
             </button>
             <button
-              disabled={!selectedMenu}
-              onClick={() => selectedMenu && onExtend(selectedMenu, selectedDur)}
+              disabled={!canOrder}
+              onClick={() => selectedMenu && onExtend(selectedMenu, finalDur)}
               className="flex-1 py-2 bg-[var(--cafe-accent)] text-white rounded-full font-semibold disabled:opacity-40"
             >
               주문하기
